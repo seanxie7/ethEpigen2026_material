@@ -1,0 +1,68 @@
+---
+title: "Assignment"
+author: "Xiaohan Xie"
+format: html
+editor: visual
+---
+
+### 1. Load packages
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub) # to fetch genomes, annotations, etc.
+  library(ensembldb)     # to manipulate ensembl gene annotations
+  library(GenomicRanges) # data structure for genomic ranges 
+  library(epiwraps)      # visualization
+})
+```
+### 2. Find and download following annotations data
+2.1 The mouse (Mus Musculus) EnsDb object, version 102, genome build GRCm38
+```{r}
+ah <- AnnotationHub()
+query_results <- query(ah, c("Mus Musculus", "EnsDb"))
+
+query_results$title #[16] "Ensembl 102 EnsDb for Mus musculus"  
+
+query_results$ah_id[16]
+
+ensdb_mouse <- ah[["AH89211"]]
+ensdb_mouse
+```
+2.2 The mouse genome sequence ( dna_sm ) in TwoBit/2bit format for GRCm38
+```{r}
+mouse_dna_query <- query(ah, c("Mus musculus", "TwoBit", "GRCm38", "dna_sm"))
+mouse_dna_query$title
+mouse_dna_query$ah_id
+rev(mouse_dna_query$ah_id)[1]
+dna_mouse <- ah["AH88477"]
+dna_mouse
+```
+2.3 The drosophila melanogaster genome sequence ( dna_sm ) in TwoBit/2bit format for BDGP6
+```{r}
+fly_dna_query <- query(ah, c("Drosophila melanogaster", "TwoBit", "BDGP6", "dna_sm"))
+fly_dna_query$title
+rev(fly_dna_query$ah_id)[1]
+dna_fly <- ah["AH106160"]
+dna_fly
+```
+### 3. Using the mouse EnsDb, find the following:
+3.1 How many different ensembl gene IDs and gene symbols are there for protein-coding genes?
+```{r}
+mouse_genes <- genes(ensdb_mouse)
+mouse_pcg <- mouse_genes[mouse_genes$gene_biotype=="protein_coding"]
+num_gene_id <- length(unique(mouse_pcg$gene_id))
+num_gene_id
+num_gene_symbol <- length(unique(na.omit(mouse_pcg$symbol)))
+num_gene_symbol
+```
+3.2 Plot the distribution of the (spliced) length of protein-coding transcripts
+```{r}
+filtered_exons <- exonsBy(ensdb_mouse, by = c("tx"), filter = ~ gene_biotype == "protein_coding")
+spliced_lengths <- sum(width(filtered_exons))
+hist(log10(spliced_lengths), 
+     breaks = 100, 
+     col = "olivedrab", 
+     main = "Distribution of Spliced Lengths (Protein-Coding)",
+     xlab = expression(log[10] * " Transcript Length"),
+     ylab = "Frequency")
+```
+
