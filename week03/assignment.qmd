@@ -1,0 +1,99 @@
+---
+title: "assignment week03"
+author: "Xiaohan Xie"
+format: html
+editor: visual
+---
+
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(Rsubread)      # read alignment
+  library(rtracklayer)   # read/write genomic file formats
+  library(Biostrings)    # handling sequences
+  library(Rfastp)        # read QC/trimming
+  library(epiwraps)
+  library(ensembldb)     # to manipulate ensembl gene annotations
+  library(GenomicRanges)
+})
+ah <- AnnotationHub()
+```
+
+```{r}
+getwd()
+```
+
+## 1. Download Drosophila ChIP-seq for the protein CTCF:
+
+```{r}
+options(timeout=3600)
+dir.create("assignment/raw")
+download.file("https://www.encodeproject.org/files/ENCFF127RRR/@@download/ENCFF127RRR.fastq.gz","assignment/raw/ctcf.fastq.gz",mode="wb")
+```
+
+## 2. Process it from the raw data, obtaining:
+
+### 2.1 Bam files
+
+#### 2.1.1 QC and Trimming
+
+```{r}
+dir.create("assignment/rfastp.trimmed")
+qc <- Rfastp::rfastp("assignment/raw/ctcf.fastq.gz", thread=4, overrepresentationAnalysis=TRUE,
+                 outputFastq="assignment/rfastp.trimmed/ctcf")
+```
+```{r}
+Rfastp::curvePlot(qc, curve="content_curves")
+```
+#### 2.1.2 Alignment
+Using the genome indices built in class:
+```{r}
+dir.create("assignment/aligned")
+align.stats <- Rsubread::align(index="BDGP6_genome/rsubread", type="dna", readfile1="assignment/rfastp.trimmed/ctcf_R1.fastq.gz",
+output_file="assignment/aligned/ctcf.bam",
+nthreads=6, sortReadsByCoordinates=TRUE)
+
+align.stats
+```
+
+```{r}
+total <- align.stats["Total_reads",1]
+mapped <- align.stats["Mapped_reads",1]
+percent_mapped <- (mapped / total) * 100
+
+cat("Percentage of reads mapped:", round(percent_mapped, 2), "%")
+```
+#### 2.2 Peak Calling
+```{bash engine.opts='-l'}
+
+conda activate chipseq
+mkdir -p assignment/peaks
+macs3 callpeak -f BAM --outdir assignment/peaks -n ctcf --gsize dm -t assignment/aligned/ctcf.bam
+
+```
+```{r}
+peaks <- rtracklayer::import("assignment/peaks/ctcf_peaks.narrowPeak")
+head(peaks)
+cat("Number of peaks found:", length(peaks))
+
+```
+### 3. Plot the signal around one of the peaks that is located inside a gene
+```{r}
+fly_query <- query(ah, c("Drosophila melanogaster", "EnsDb", "BDGP6"))
+colnames(mcols(fly_query))
+date_added <- mcols(fly_query)[,c("genome","rdatadateadded")]
+date_added
+ens_fly <- ah[["AH53198"]]
+ens_fly
+```
+```{r}
+fly_genes <- genes(ens_fly)
+suppressWarnings({peaks_in_genes <- subsetByOverlaps(peaks, fly_genes)}) 
+length(peaks_in_genes)
+head(peaks_in_genes)
+```
+```{r}
+plotSignalTracks(list(ctcf="assignment/aligned/ctcf.bam", peaks=peaks_in_genes), region=peaks_in_genes[1], tracks.params=list(ylim=c(0,100)))
+```
+
+

@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.24">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Xiaohan Xie">
+
+<title>assignment week03</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="assignment_files/libs/clipboard/clipboard.min.js"></script>
+<script src="assignment_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="assignment_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="assignment_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="assignment_files/libs/quarto-html/popper.min.js"></script>
+<script src="assignment_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="assignment_files/libs/quarto-html/anchor.min.js"></script>
+<link href="assignment_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="assignment_files/libs/quarto-html/quarto-syntax-highlighting-dc55a5b9e770e841cd82e46aadbfb9b0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="assignment_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="assignment_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="assignment_files/libs/bootstrap/bootstrap-d6a003b94517c951b2d65075d42fb01b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">assignment week03</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Xiaohan Xie </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(AnnotationHub)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(Rsubread)      <span class="co"># read alignment</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(rtracklayer)   <span class="co"># read/write genomic file formats</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(Biostrings)    <span class="co"># handling sequences</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(Rfastp)        <span class="co"># read QC/trimming</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(epiwraps)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(ensembldb)     <span class="co"># to manipulate ensembl gene annotations</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(GenomicRanges)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'dbplyr' was built under R version 4.5.2</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>ah <span class="ot">&lt;-</span> <span class="fu">AnnotationHub</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">getwd</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "/Users/seanxie/Desktop/Epigen/ethEpigen2026_material/week03"</code></pre>
+</div>
+</div>
+<section id="download-drosophila-chip-seq-for-the-protein-ctcf" class="level2">
+<h2 class="anchored" data-anchor-id="download-drosophila-chip-seq-for-the-protein-ctcf">1. Download Drosophila ChIP-seq for the protein CTCF:</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">timeout=</span><span class="dv">3600</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(<span class="st">"assignment/raw"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in dir.create("assignment/raw"): 'assignment/raw' already exists</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">download.file</span>(<span class="st">"https://www.encodeproject.org/files/ENCFF127RRR/@@download/ENCFF127RRR.fastq.gz"</span>,<span class="st">"assignment/raw/ctcf.fastq.gz"</span>,<span class="at">mode=</span><span class="st">"wb"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="process-it-from-the-raw-data-obtaining" class="level2">
+<h2 class="anchored" data-anchor-id="process-it-from-the-raw-data-obtaining">2. Process it from the raw data, obtaining:</h2>
+<section id="bam-files" class="level3">
+<h3 class="anchored" data-anchor-id="bam-files">2.1 Bam files</h3>
+<section id="qc-and-trimming" class="level4">
+<h4 class="anchored" data-anchor-id="qc-and-trimming">2.1.1 QC and Trimming</h4>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(<span class="st">"assignment/rfastp.trimmed"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in dir.create("assignment/rfastp.trimmed"): 'assignment/rfastp.trimmed'
+already exists</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>qc <span class="ot">&lt;-</span> Rfastp<span class="sc">::</span><span class="fu">rfastp</span>(<span class="st">"assignment/raw/ctcf.fastq.gz"</span>, <span class="at">thread=</span><span class="dv">4</span>, <span class="at">overrepresentationAnalysis=</span><span class="cn">TRUE</span>,</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>                 <span class="at">outputFastq=</span><span class="st">"assignment/rfastp.trimmed/ctcf"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>Rfastp<span class="sc">::</span><span class="fu">curvePlot</span>(qc, <span class="at">curve=</span><span class="st">"content_curves"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: `aes_string()` was deprecated in ggplot2 3.0.0.
+ℹ Please use tidy evaluation idioms with `aes()`.
+ℹ See also `vignette("ggplot2-in-packages")` for more information.
+ℹ The deprecated feature was likely used in the Rfastp package.
+  Please report the issue to the authors.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="assignment_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="alignment" class="level4">
+<h4 class="anchored" data-anchor-id="alignment">2.1.2 Alignment</h4>
+<p>Using the genome indices built in class:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(<span class="st">"assignment/aligned"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in dir.create("assignment/aligned"): 'assignment/aligned' already
+exists</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>align.stats <span class="ot">&lt;-</span> Rsubread<span class="sc">::</span><span class="fu">align</span>(<span class="at">index=</span><span class="st">"BDGP6_genome/rsubread"</span>, <span class="at">type=</span><span class="st">"dna"</span>, <span class="at">readfile1=</span><span class="st">"assignment/rfastp.trimmed/ctcf_R1.fastq.gz"</span>,</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="at">output_file=</span><span class="st">"assignment/aligned/ctcf.bam"</span>,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="at">nthreads=</span><span class="dv">6</span>, <span class="at">sortReadsByCoordinates=</span><span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+        ==========     _____ _    _ ____  _____  ______          _____  
+        =====         / ____| |  | |  _ \|  __ \|  ____|   /\   |  __ \ 
+          =====      | (___ | |  | | |_) | |__) | |__     /  \  | |  | |
+            ====      \___ \| |  | |  _ &lt;|  _  /|  __|   / /\ \ | |  | |
+              ====    ____) | |__| | |_) | | \ \| |____ / ____ \| |__| |
+        ==========   |_____/ \____/|____/|_|  \_\______/_/    \_\_____/
+       Rsubread 2.22.1
+
+//================================= setting ==================================\\
+||                                                                            ||
+|| Function      : Read alignment (DNA-Seq)                                   ||
+|| Input file    : ctcf_R1.fastq.gz                                           ||
+|| Output file   : ctcf.bam (BAM), Sorted                                     ||
+|| Index name    : rsubread                                                   ||
+||                                                                            ||
+||                    ------------------------------------                    ||
+||                                                                            ||
+||                               Threads : 6                                  ||
+||                          Phred offset : 33                                 ||
+||                             Min votes : 3 / 10                             ||
+||                        Max mismatches : 3                                  ||
+||                      Max indel length : 5                                  ||
+||            Report multi-mapping reads : yes                                ||
+|| Max alignments per multi-mapping read : 1                                  ||
+||                                                                            ||
+\\============================================================================//
+
+//================ Running (11-Mar-2026 18:47:08, pid=91918) =================\\
+||                                                                            ||
+|| Check the input reads.                                                     ||
+|| The input file contains base space reads.                                  ||
+|| Initialise the memory objects.                                             ||
+|| Estimate the mean read length.                                             ||
+|| The range of Phred scores observed in the data is [0,29]                   ||
+|| Create the output BAM file.                                                ||
+|| Check the index.                                                           ||
+|| Init the voting space.                                                     ||
+|| Global environment is initialised.                                         ||
+|| Load the 1-th index block...                                               ||
+|| The index block has been loaded.                                           ||
+|| Start read mapping in chunk.                                               ||
+||    1% completed,  21 mins elapsed, rate=54.6k reads per second             ||
+||    8% completed,  21 mins elapsed, rate=156.4k reads per second            ||
+||   14% completed,  21 mins elapsed, rate=96.4k reads per second             ||
+||   21% completed,  21 mins elapsed, rate=85.0k reads per second             ||
+||   27% completed,  21 mins elapsed, rate=71.6k reads per second             ||
+||   34% completed,  22 mins elapsed, rate=80.4k reads per second             ||
+||   40% completed,  22 mins elapsed, rate=87.6k reads per second             ||
+||   46% completed,  22 mins elapsed, rate=94.5k reads per second             ||
+||   53% completed,  22 mins elapsed, rate=99.9k reads per second             ||
+||   60% completed,  22 mins elapsed, rate=92.9k reads per second             ||
+||   70% completed,  22 mins elapsed, rate=2.0k reads per second              ||
+||   73% completed,  22 mins elapsed, rate=2.1k reads per second              ||
+||   76% completed,  22 mins elapsed, rate=2.2k reads per second              ||
+||   80% completed,  22 mins elapsed, rate=2.3k reads per second              ||
+||   83% completed,  22 mins elapsed, rate=2.4k reads per second              ||
+||   86% completed,  22 mins elapsed, rate=2.5k reads per second              ||
+||   89% completed,  22 mins elapsed, rate=2.6k reads per second              ||
+||   93% completed,  22 mins elapsed, rate=2.6k reads per second              ||
+||   96% completed,  22 mins elapsed, rate=2.7k reads per second              ||
+||   99% completed,  22 mins elapsed, rate=2.8k reads per second              ||
+||                                                                            ||
+||                           Completed successfully.                          ||
+||                                                                            ||
+\\====================================    ====================================//
+
+//================================   Summary =================================\\
+||                                                                            ||
+||                 Total reads : 3,816,990                                    ||
+||                      Mapped : 3,504,769 (91.8%)                            ||
+||             Uniquely mapped : 3,048,315                                    ||
+||               Multi-mapping : 456,454                                      ||
+||                                                                            ||
+||                    Unmapped : 312,221                                      ||
+||                                                                            ||
+||                      Indels : 1,836                                        ||
+||                                                                            ||
+||                Running time : 35.4 minutes                                 ||
+||                                                                            ||
+\\============================================================================//</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>align.stats</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                      ctcf.bam
+Total_reads            3816990
+Mapped_reads           3504769
+Uniquely_mapped_reads  3048315
+Multi_mapping_reads     456454
+Unmapped_reads          312221
+Indels                    1836</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>total <span class="ot">&lt;-</span> align.stats[<span class="st">"Total_reads"</span>,<span class="dv">1</span>]</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>mapped <span class="ot">&lt;-</span> align.stats[<span class="st">"Mapped_reads"</span>,<span class="dv">1</span>]</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>percent_mapped <span class="ot">&lt;-</span> (mapped <span class="sc">/</span> total) <span class="sc">*</span> <span class="dv">100</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Percentage of reads mapped:"</span>, <span class="fu">round</span>(percent_mapped, <span class="dv">2</span>), <span class="st">"%"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Percentage of reads mapped: 91.82 %</code></pre>
+</div>
+</div>
+</section>
+<section id="peak-calling" class="level4">
+<h4 class="anchored" data-anchor-id="peak-calling">2.2 Peak Calling</h4>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate chipseq</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> assignment/peaks</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="ex">macs3</span> callpeak <span class="at">-f</span> BAM <span class="at">--outdir</span> assignment/peaks <span class="at">-n</span> ctcf <span class="at">--gsize</span> dm <span class="at">-t</span> assignment/aligned/ctcf.bam</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>INFO  @ 11 Mar 2026 19:22:31: [36 MB] 
+# Command line: callpeak -f BAM --outdir assignment/peaks -n ctcf --gsize dm -t assignment/aligned/ctcf.bam
+# ARGUMENTS LIST:
+# name = ctcf
+# format = BAM
+# ChIP-seq file = ['assignment/aligned/ctcf.bam']
+# control file = None
+# effective genome size = 1.43e+08
+# band width = 300
+# model fold = [5, 50]
+# qvalue cutoff = 5.00e-02
+# The maximum gap between significant sites is assigned as the read length/tag size.
+# The minimum length of peaks is assigned as the predicted fragment length "d".
+# Larger dataset will be scaled towards smaller dataset.
+# Range for calculating regional lambda is: 10000 bps
+# Broad region calling is off
+# Paired-End mode is off
+ 
+INFO  @ 11 Mar 2026 19:22:31: [36 MB] #1 read tag files... 
+INFO  @ 11 Mar 2026 19:22:31: [36 MB] #1 read treatment tags... 
+INFO  @ 11 Mar 2026 19:22:32: [63 MB]  1000000 reads parsed 
+INFO  @ 11 Mar 2026 19:22:33: [68 MB]  2000000 reads parsed 
+INFO  @ 11 Mar 2026 19:22:35: [79 MB]  3000000 reads parsed 
+INFO  @ 11 Mar 2026 19:22:36: [1529 MB] 3504769 reads have been read. 
+INFO  @ 11 Mar 2026 19:22:36: [1529 MB] #1 tag size is determined as 36 bps 
+INFO  @ 11 Mar 2026 19:22:36: [1529 MB] #1 tag size = 36.0 
+INFO  @ 11 Mar 2026 19:22:36: [1529 MB] #1  total tags in treatment: 3504769 
+INFO  @ 11 Mar 2026 19:22:36: [1529 MB] #1 user defined the maximum tags... 
+INFO  @ 11 Mar 2026 19:22:36: [1529 MB] #1 filter out redundant tags at the same location and the same strand by allowing at most 1 tag(s) 
+INFO  @ 11 Mar 2026 19:22:37: [1529 MB] #1  tags after filtering in treatment: 2351375 
+INFO  @ 11 Mar 2026 19:22:37: [1529 MB] #1  Redundant rate of treatment: 0.33 
+INFO  @ 11 Mar 2026 19:22:37: [1529 MB] #1 finished! 
+INFO  @ 11 Mar 2026 19:22:37: [1529 MB] #2 Build Peak Model... 
+INFO  @ 11 Mar 2026 19:22:37: [1529 MB] #2 looking for paired plus/minus strand peaks... 
+INFO  @ 11 Mar 2026 19:22:38: [1529 MB] #2 Total number of paired peaks: 1481 
+INFO  @ 11 Mar 2026 19:22:38: [1529 MB] #2 Model building with cross-correlation: Done 
+INFO  @ 11 Mar 2026 19:22:38: [1529 MB] #2 finished! 
+INFO  @ 11 Mar 2026 19:22:38: [1529 MB] #2 predicted fragment length is 176 bps 
+INFO  @ 11 Mar 2026 19:22:38: [1529 MB] #2 alternative fragment length(s) may be 176 bps 
+INFO  @ 11 Mar 2026 19:22:38: [1529 MB] #2.2 Generate R script for model : assignment/peaks/ctcf_model.r 
+INFO  @ 11 Mar 2026 19:22:38: [1529 MB] #3 Call peaks... 
+INFO  @ 11 Mar 2026 19:22:38: [1529 MB] #3 Pre-compute pvalue-qvalue table... 
+INFO  @ 11 Mar 2026 19:22:48: [1529 MB] #3 Call peaks for each chromosome... 
+INFO  @ 11 Mar 2026 19:22:51: [1529 MB] #4 Write output xls file... assignment/peaks/ctcf_peaks.xls 
+INFO  @ 11 Mar 2026 19:22:51: [1529 MB] #4 Write peak in narrowPeak format file... assignment/peaks/ctcf_peaks.narrowPeak 
+INFO  @ 11 Mar 2026 19:22:51: [1529 MB] #4 Write summits bed file... assignment/peaks/ctcf_summits.bed 
+INFO  @ 11 Mar 2026 19:22:51: [1529 MB] Done! </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>peaks <span class="ot">&lt;-</span> rtracklayer<span class="sc">::</span><span class="fu">import</span>(<span class="st">"assignment/peaks/ctcf_peaks.narrowPeak"</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(peaks)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>GRanges object with 6 ranges and 6 metadata columns:
+             seqnames    ranges strand |        name     score signalValue
+                &lt;Rle&gt; &lt;IRanges&gt;  &lt;Rle&gt; | &lt;character&gt; &lt;numeric&gt;   &lt;numeric&gt;
+  [1] 211000022278132   159-471      * | ctcf_peak_1        88     5.38094
+  [2] 211000022278134   180-386      * | ctcf_peak_2       106     5.89341
+  [3] 211000022278137     1-397      * | ctcf_peak_3       619    17.16770
+  [4] 211000022278143   680-855      * | ctcf_peak_4        42     3.84353
+  [5] 211000022278151     1-313      * | ctcf_peak_5       203     8.45576
+  [6] 211000022278158  721-1036      * | ctcf_peak_6       605    16.91150
+         pValue    qValue      peak
+      &lt;numeric&gt; &lt;numeric&gt; &lt;integer&gt;
+  [1]  11.18920   8.87224       170
+  [2]  12.97310  10.60810       153
+  [3]  64.79620  61.90150       221
+  [4]   6.34941   4.22806       152
+  [5]  22.88830  20.34750       170
+  [6]  63.43270  60.54580       145
+  -------
+  seqinfo: 306 sequences from an unspecified genome; no seqlengths</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Number of peaks found:"</span>, <span class="fu">length</span>(peaks))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Number of peaks found: 5392</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="plot-the-signal-around-one-of-the-peaks-that-is-located-inside-a-gene" class="level3">
+<h3 class="anchored" data-anchor-id="plot-the-signal-around-one-of-the-peaks-that-is-located-inside-a-gene">3. Plot the signal around one of the peaks that is located inside a gene</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>fly_query <span class="ot">&lt;-</span> <span class="fu">query</span>(ah, <span class="fu">c</span>(<span class="st">"Drosophila melanogaster"</span>, <span class="st">"EnsDb"</span>, <span class="st">"BDGP6"</span>))</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(<span class="fu">mcols</span>(fly_query))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "title"              "dataprovider"       "species"           
+ [4] "taxonomyid"         "genome"             "description"       
+ [7] "coordinate_1_based" "maintainer"         "rdatadateadded"    
+[10] "preparerclass"      "tags"               "rdataclass"        
+[13] "rdatapath"          "sourceurl"          "sourcetype"        </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>date_added <span class="ot">&lt;-</span> <span class="fu">mcols</span>(fly_query)[,<span class="fu">c</span>(<span class="st">"genome"</span>,<span class="st">"rdatadateadded"</span>)]</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>date_added</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>DataFrame with 27 rows and 2 columns
+              genome rdatadateadded
+         &lt;character&gt;    &lt;character&gt;
+AH53198        BDGP6     2017-02-07
+AH53702        BDGP6     2017-04-05
+AH56668        BDGP6     2017-06-29
+AH57743        BDGP6     2017-08-31
+AH60759        BDGP6     2017-12-21
+...              ...            ...
+AH109569    BDGP6.32     2022-10-30
+AH113629    BDGP6.46     2023-04-25
+AH116255    BDGP6.46     2023-10-23
+AH116820    BDGP6.46     2024-04-30
+AH119285    BDGP6.46     2024-10-28</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>ens_fly <span class="ot">&lt;-</span> ah[[<span class="st">"AH53198"</span>]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Error while performing HEAD request.
+   Proceeding without cache information.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>loading from cache</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>ens_fly</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>EnsDb for Ensembl:
+|Backend: SQLite
+|Db type: EnsDb
+|Type of Gene ID: Ensembl Gene ID
+|Supporting package: ensembldb
+|Db created by: ensembldb package from Bioconductor
+|script_version: 0.3.1
+|Creation time: Wed Jun  7 23:23:49 2017
+|ensembl_version: 87
+|ensembl_host: localhost
+|Organism: drosophila_melanogaster
+|taxonomy_id: 7227
+|genome_build: BDGP6
+|DBSCHEMAVERSION: 2.1
+| No. of genes: 17559.
+| No. of transcripts: 34749.
+|Protein data available.</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>fly_genes <span class="ot">&lt;-</span> <span class="fu">genes</span>(ens_fly)</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressWarnings</span>({peaks_in_genes <span class="ot">&lt;-</span> <span class="fu">subsetByOverlaps</span>(peaks, fly_genes)}) </span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(peaks_in_genes)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 3898</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(peaks_in_genes)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>GRanges object with 6 ranges and 6 metadata columns:
+             seqnames    ranges strand |         name     score signalValue
+                &lt;Rle&gt; &lt;IRanges&gt;  &lt;Rle&gt; |  &lt;character&gt; &lt;numeric&gt;   &lt;numeric&gt;
+  [1] 211000022278158  721-1036      * |  ctcf_peak_6       605    16.91150
+  [2] 211000022278282  865-1045      * | ctcf_peak_20        80     5.12470
+  [3] 211000022278282 1165-1347      * | ctcf_peak_21        97     5.63717
+  [4] 211000022278282 1459-2399      * | ctcf_peak_22       314    11.01810
+  [5] 211000022278307     1-416      * | ctcf_peak_25       789    18.51200
+  [6] 211000022278307   499-957      * | ctcf_peak_26       168     7.05219
+         pValue    qValue      peak
+      &lt;numeric&gt; &lt;numeric&gt; &lt;integer&gt;
+  [1]   63.4327  60.54580       145
+  [2]   10.3267   8.03592       147
+  [3]   12.0716   9.73037       164
+  [4]   34.1119  31.44590       621
+  [5]   81.9468  78.95710       237
+  [6]   19.3488  16.86060       164
+  -------
+  seqinfo: 306 sequences from an unspecified genome; no seqlengths</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plotSignalTracks</span>(<span class="fu">list</span>(<span class="at">ctcf=</span><span class="st">"assignment/aligned/ctcf.bam"</span>, <span class="at">peaks=</span>peaks_in_genes), <span class="at">region=</span>peaks_in_genes[<span class="dv">1</span>], <span class="at">tracks.params=</span><span class="fu">list</span>(<span class="at">ylim=</span><span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">100</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="assignment_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
