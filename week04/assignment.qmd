@@ -1,0 +1,109 @@
+---
+title: "assignment04"
+author: "Xiaohan Xie"
+format: html
+editor: visual
+---
+
+```{r}
+suppressPackageStartupMessages({
+  library(AnnotationHub)
+  library(ensembldb)
+  library(GenomicRanges)
+  library(epiwraps)
+  library(rtracklayer)
+  library(ggplot2)
+})
+ah <- AnnotationHub()
+```
+
+# 1. Load the peaks for p300, H3K27ac and H3K27me3 in mouse embryonic stem cells (mESC) and in one differentiated tissue (heart)
+
+For the peaks data in heart, chip-seq data from 2 months old was used. 
+```{r}
+# load the files
+bed_files <- list.files(pattern = "\\.bed$", full.names = TRUE)
+bed_names <- gsub("\\.bed$", "", basename(bed_files))
+peaks <- lapply(bed_files, FUN=rtracklayer::import, format="narrowPeak")
+names(peaks) <- bed_names
+
+summary(peaks)
+```
+use the genome from last assignment:
+```{r}
+ensdb_mouse <- ah[["AH89211"]]
+ensdb_mouse 
+```
+get the TSS coordinates, using the definition of TSS in annotateRegions:
+```{r}
+transcripts_mouse <- transcripts(ensdb_mouse)
+tss <- promoters(transcripts_mouse, upstream = 2500, downstream = 1000)
+head(tss)
+seqlevelsStyle(tss) <- "UCSC" # need to translate it to encode style
+```
+# 2. Compare the signals across the two tissues
+## 2.1 Proportion of TSS that overlap H3K27ac, H3K27me3, and the combination of both, in each tissue?
+Using type="any" when counting the overlaps:
+```{r}
+targets <- list(
+  msc_me3   = peaks$msc_H3K27me3,
+  msc_ac    = peaks$msc_H3K27ac,
+  heart_me3 = peaks$heart_H3K27me3,
+  heart_ac  = peaks$heart_H3K27ac
+)
+sapply(targets, FUN=function(x) sum(overlapsAny(tss, x, type = "any"))/length(tss))
+```
+H3K27ac: associated with active/poised TSS. Proportion of TSS overlapping with H3K27ac peaks is much larger in heart (42.9%) than in mESC (31.8%), as heart is a differentiated organ that has more transcription activities than a stem cell. 
+H3K27me3: associated with repressed gene expression, and has likewise less overlapping with TSS in heart than in stem cell. 
+
+```{r}
+msc_both <- sum(overlapsAny(tss, peaks$msc_H3K27ac) & 
+                overlapsAny(tss, peaks$msc_H3K27me3)) / length(tss)
+
+heart_both <- sum(overlapsAny(tss, peaks$heart_H3K27ac) & 
+                  overlapsAny(tss, peaks$heart_H3K27me3)) / length(tss)
+cat("Proportion of TSS overlapping both in mESC:", msc_both, "\n")
+cat("Proportion of TSS overlapping both in heart:", heart_both, "\n")
+```
+The proportion of TSS that overlaps both peaks is very low, which is as expected, as H3K27ac and H3K27me3 are on the same lysine and indicate opposite effects. 
+
+## 2.2 Relationship between the three signals in both tissues
+```{r}
+msc_peaks <- list(
+  H3K27ac = peaks$msc_H3K27ac,
+  H3K27me3 = peaks$msc_H3K27me3,
+  p300 = peaks$msc_p300
+)
+
+heart_peaks <- list(
+  H3K27ac = peaks$heart_H3K27ac,
+  H3K27me3 = peaks$heart_H3K27me3,
+  p300 = peaks$heart_p300
+)
+regionOverlaps(msc_peaks,main = "Signal Overlaps in mESC") 
+regionOverlaps(heart_peaks, main = "Signal Overlaps in Heart")
+
+```
+Since the function of p300 is mainly to add acetyl groups to histone proteins, it could be seen from the plot that p300 and H3K27ac have very high overlaps, in both tissues. 
+Again, as H3K27me3 and H3K27ac are signals on the same lysine and are indicators of contradictory effects, they are physically exclusive and do not show much overlaps. This could also be seen in both tissues. 
+
+## 2.3 Relationship between regulatory elements active in mESC and in the differentiated tissue?
+```{r}
+ac_both <- list(ac_msc = peaks$msc_H3K27ac, ac_heart = peaks$heart_H3K27ac)
+me3_both <- list(me3_msc = peaks$msc_H3K27me3, me3_heart = peaks$heart_H3K27me3)
+p300_both <- list(p300_msc = peaks$msc_p300, p300_heart = peaks$heart_p300)
+areas <- list(ac_both, me3_both, p300_both)
+
+
+ov_ac <- sum(overlapsAny(peaks$msc_H3K27ac, peaks$heart_H3K27ac, type = "any"))/length(peaks$msc_H3K27ac)
+cat("Proportion of overlapping peaks between H3K27ac in mESC and heart:", ov_ac, "\n")
+
+ov_me3 <- sum(overlapsAny(peaks$msc_H3K27me3, peaks$heart_H3K27me3, type = "any"))/length(peaks$msc_H3K27me3)
+cat("Proportion of overlapping peaks between H3K27me3 in mESC and heart:", ov_me3, "\n")
+
+ov_p300 <- sum(overlapsAny(peaks$msc_p300, peaks$heart_p300, type = "any"))/length(peaks$msc_p300)
+cat("Proportion of overlapping peaks between p300 in mESC and heart:", ov_p300, "\n")
+```
+From the overlapping proportions, we could see that about 27% of H3K27ac regions in mESC are also present in the heart sample, which are most likely housekeeping genes that are active in both stem cells and heart. This might also be the reason for the 20% of overlapping between the p300 regions in both samples. 
+Only around 8% of H3K27me3 regions in mESC overlap with H3K27me3 regions in heart, indicating that repressed regions differ strongly between mESC and heart. 
+
