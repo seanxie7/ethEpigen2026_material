@@ -1,0 +1,102 @@
+---
+title: "assignment05"
+author: "Xiaohan Xie"
+format: html
+editor: visual
+---
+```{r}
+suppressPackageStartupMessages({
+  library(GenomicRanges)
+  library(chromVAR)
+  library(SummarizedExperiment)
+  library(edgeR)
+  library(epiwraps)
+  library(ggplot2)
+  library(pheatmap)
+})
+```
+
+## 1. Download (a subset of) ATAC-seq peak counts in the hippocampus upon stress 
+(already in SummarizedExperiment format)
+```{r}
+options(timeout=3600)
+download.file("https://ethz-ins.org/content/mouse_mm38_hippocampus.peakCounts.SE.rds", "mouse_mm38_hippocampus.peakCounts.SE.rds", mode="wb")
+se <- readRDS("mouse_mm38_hippocampus.peakCounts.SE.rds")
+head(se)
+colnames(se)
+# add the metadata needed
+row.names(se) <- as.character(granges(se))
+se$group <- c("CTRL","CTRL","CTRL","CTRL","CTRL","CTRL","FSS","FSS","FSS","FSS","FSS","FSS")
+se$sex <- c("female","female","female","male","male","male","female","female","female","male","male","male")
+```
+
+## 2. Using this object, run 2 differential analyses
+### 2.1 Comparing stressed (denoted ‘FSS’ – forced swim stress) and control animals
+```{r}
+dds_grp <- DGEList(assay(se), group=se$group)
+dds_grp <- calcNormFactors(dds_grp)
+dds_grp <- estimateDisp(dds_grp)
+
+et_grp <- as.data.frame(topTags(exactTest(dds_grp), Inf))
+head(et_grp,20)
+ggplot(et_grp, aes(logFC, -log10(FDR))) + geom_point()
+```
+Plotting the heatmap: 
+```{r}
+anno_col <- data.frame(
+  Group = se$group
+)
+```
+
+```{r}
+top_peaks_grp <- rownames(head(et_grp, 20))
+# extract the logCPM 
+log_counts_grp <- cpm(dds_grp, log=TRUE)
+mat_grp <- log_counts_grp[top_peaks_grp, ]
+rownames(anno_col) <- colnames(mat_grp)
+pheatmap(mat_grp,
+         annotation_col = anno_col,
+         show_rownames = FALSE,
+         show_colnames = FALSE,
+         cluster_cols = FALSE,
+         main = "Top 20 Most Significant Regions (Control vs FSS) ") 
+
+```
+### 2.2 Comparing male and female animals
+
+```{r}
+dds_sex <- DGEList(assay(se), group=se$sex)
+dds_sex <- calcNormFactors(dds_sex)
+dds_sex <- estimateDisp(dds_sex)
+
+et_sex <- as.data.frame(topTags(exactTest(dds_sex), Inf))
+head(et_sex,20)
+ggplot(et_sex, aes(logFC, -log10(FDR))) + geom_point()
+```
+Plotting the heatmap: 
+```{r}
+anno_col <- data.frame(
+  Sex = se$sex
+)
+```
+
+```{r}
+top_peaks_sex <- rownames(head(et_sex, 20))
+# extract the logCPM 
+log_counts_sex <- cpm(dds_sex, log=TRUE)
+mat_sex <- log_counts_sex[top_peaks_sex, ]
+rownames(anno_col) <- colnames(mat_sex)
+correct_order <- order(anno_col$Sex)
+mat_sex_sorted <- mat_sex[ , correct_order]
+pheatmap(mat_sex_sorted,
+         annotation_col = anno_col,
+         show_rownames = FALSE,
+         show_colnames = FALSE,
+         cluster_cols = FALSE,
+         main = "Top 20 Most Significant Regions (Female vs Male) ") 
+
+```
+
+
+
+
