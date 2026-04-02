@@ -2568,6 +2568,7 @@ T 0.007949126 0.00000000 0.155272920 0.015368309 0.23476418</code></pre>
 <pre><code>[1] &quot;Of the 531405 motif instances, 7945 (1.5%) overlap a peak.&quot;</code></pre>
 </div>
 </div>
+<p>Possible reason for the discrepancy of 7707 &gt;&gt; 2573: when identifying motifs in the peaks sequences using motif_hits &lt;- motifmatchr::matchMotifs(motif2, subject=peaks, genome=Rsamtools::FaFile(“genome_seqs.fa”), out=“positions”), background is calculated only with peak sequences, many weaker motif occurrences are thus not able to pass the significance threshold. If we specify bg=“genome”, the overlapping results would be much more similar.</p>
 </section>
 
 </main>

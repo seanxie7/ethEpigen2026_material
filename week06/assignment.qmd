@@ -5,6 +5,7 @@ format: html
 self-contained: true
 editor: visual
 ---
+
 ```{r setup}
 suppressPackageStartupMessages({
   library(AnnotationHub)
@@ -23,16 +24,20 @@ suppressPackageStartupMessages({
   library(dplyr)
 })
 ```
+
 ## Obtaining peak sequences
-Transcription factor chosen: EGR1
-Biosample chosen: Homo sapiens liver tissue female child (4 years)
+
+Transcription factor chosen: EGR1 Biosample chosen: Homo sapiens liver tissue female child (4 years)
+
 ```{r}
 download.file("https://www.encodeproject.org/files/ENCFF768POQ/@@download/ENCFF768POQ.bed.gz", "hsLiver_EGR1_ENCFF768POQ.bed.gz")
 peaks <- rtracklayer::import("hsLiver_EGR1_ENCFF768POQ.bed.gz", format="NarrowPeak")
 seqlevelsStyle(peaks) <- "Ensembl" 
 head(peaks)
 ```
+
 Get the corresponding GRCh38 genome:
+
 ```{r}
 ah <- AnnotationHub()
 query_results <- AnnotationHub::query(ah, c("Homo Sapiens", "TwoBit", "GRCh38"))
@@ -42,8 +47,11 @@ genome <- ah[["AH82402"]]
 genome_seqs <- import(genome)
 peak_seqs <- Biostrings::getSeq(genome, peaks)
 ```
+
 ## Identify instances of the factor's motif
-### Get the desired motif 
+
+### Get the desired motif
+
 ```{r}
 # we search for "EGR1" in the motif database
 motifs <- query(MotifDb, c("EGR1"))
@@ -56,6 +64,7 @@ motif
 #view_motifs(motifs[1:2])
 view_motifs(motif)
 ```
+
 ### Using motifmatchr:
 
 ```{r}
@@ -79,13 +88,16 @@ proportion_contain <- mean(overlaps)
 sprintf("Of the %d peaks, %d (%.1f%%) contain a motif.", 
         length(peaks), counts_contain, proportion_contain*100)
 ```
+
 ## Of all instances of that motif in the genome, what proportion is bound by the factor (i.e.has a peak)?
+
 ```{r}
 motif_across_genome <- matchMotifs(motif2, subject=genome_seqs, out="positions")[[1]]
 names(motif_across_genome) <- names(genome_seqs)
 motif_across_genome <- as(motif_across_genome, "GRanges")
 head(motif_across_genome)
 ```
+
 ```{r}
 overlaps <- overlapsAny(motif_across_genome, peaks) # could use within to be stricter ?
 counts_contain <- sum(overlaps)
@@ -94,3 +106,5 @@ sprintf("Of the %d motif instances, %d (%.1f%%) overlap a peak.",
         length(motif_across_genome), counts_contain, proportion_contain*100)
 ```
 
+Possible reason for the discrepancy of 7707 >> 2573: when identifying motifs in the peaks sequences using motif_hits <- motifmatchr::matchMotifs(motif2, subject=peaks, genome=Rsamtools::FaFile("genome_seqs.fa"),
+                                out="positions"), background is calculated only with peak sequences, many weaker motif occurrences are thus not able to pass the significance threshold. If we specify bg="genome", the overlapping results would be much more similar. 
