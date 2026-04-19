@@ -1,0 +1,104 @@
+---
+title: "assignment07"
+author: "Xiaohan Xie"
+format: html
+editor: visual
+self-contained: true
+---
+## Part 1
+In the same dataset of ATAC on chr19 used in the first part of the practical, plot
+1) the insertion (i.e. ‘cuts’) profile of nucleosome-free fragments and
+2) the centers of nucleosome-containing fragments, around the high-confidence motifs of a transcription factor of your choice (one figure containing the two signals)
+Transcription factor chosen: REST
+
+```{r}
+suppressPackageStartupMessages({
+  library(epiwraps)
+  library(AnnotationHub)
+  library(MotifDb)
+  library(memes)
+  library(universalmotif)
+  library(ensembldb)
+  library(ggplot2)
+  library(sechm)
+  library(BSgenome.Mmusculus.UCSC.mm10)
+  library(limma)
+  library(betterChromVAR)
+})
+
+ah <- AnnotationHub(localHub=TRUE)
+ensdb <- ah[["AH89211"]] # mouse ensembldb object
+```
+
+### Obtaining the sites with a REST motif
+
+```{r}
+# get CTCF motif
+motif <- MotifDb::query(MotifDb, c("REST","Mus"))[[1]]
+motif2 <- convert_motifs(motif, class="TFBSTools-PFMatrix")
+genome <- ah[["AH68356"]]
+# get the sequence for chr19:
+chr19 <- import(genome)["19"]
+
+# find motif matches across chr19
+moi <- motifmatchr::matchMotifs(motif2, chr19, out="positions", p.cutoff=1e-5)[[1]]
+# convert to GRanges
+moi <- as(setNames(moi,names(chr19)), "GRanges")
+```
+### Plotting signal around the motif occurences
+
+```{r, fig.width=8, fig.height=4}
+# we prepare the list of tracks
+tracks <- list.files(pattern="bw$")
+names(tracks) <- gsub("\\.bw","",basename(tracks))
+
+# extract signals around the motif occurences
+# we zoom in to 300bp around the motif centers, in windows of 5bp
+sm <- signal2Matrix(tracks, moi, w=5, extend=300)
+
+# plot the signals:
+plotEnrichedHeatmaps(sm, trim=0.95, multiScale = TRUE, axis_name = "0", use_raster = FALSE)
+```
+```{r}
+d <- meltSignals(sm[,c("NF_cuts", "mono_centers")])
+ggplot(d, aes(position, mean, colour=sample)) + geom_line(size=1.2)
+```
+
+## Part 2
+In the peak counts dataset from stressed brains that we used in the second part of the practical, identify motifs that change in accessibility between males and females, and plot a heatmap of the deviations for the top few candidates motifs.
+```{r}
+se <- readRDS("peakCounts.rds")
+```
+### Annotate regions
+```{r}
+# we restrict the regions to standard chromosomes and change the seq level style to match the genome
+se <- GenomeInfoDb::keepStandardChromosomes(se, pruning.mode = "coarse")
+seqlevelsStyle(se) <- "UCSC"
+se <- addGCBias(se, genome=BSgenome.Mmusculus.UCSC.mm10)
+# (to use a fasta file as genome, we could simply do genome=FaFile("path/to/genome.fasta") )
+```
+### Motif matches
+```{r, message=FALSE}
+# make sure you specify a collection, in order to avoid having redundant motifs:
+motifs <- MotifDb::query(MotifDb, "HOCOMOCOv13")
+motifs <- do.call(TFBSTools::PWMatrixList, convert_motifs(motifs, class="TFBSTools-PWMatrix"))
+names(motifs) <- make.unique(sapply(motifs, \(x) gsub("\\..+","",x@name)))
+
+matches <- motifmatchr::matchMotifs(motifs, se, genome=BSgenome.Mmusculus.UCSC.mm10)
+```
+### Get Motif deviations
+```{r}
+dev <- betterChromVAR(se, matches)
+```
+### Differential Analysis between Males and Females
+```{r}
+dev$group <- ifelse(grepl("female", colnames(dev)), "Female", "Male")
+design <- model.matrix(~group, data=as.data.frame(colData(dev)))
+fit <- eBayes(lmFit(assay(dev, "z"), design))
+res <- as.data.frame(topTable(fit, number = Inf))
+res$motif <- row.names(res)
+ggplot(res, aes(logFC, -log10(adj.P.Val), label=motif)) + geom_text()
+```
+```{r}
+sechm(dev, head(row.names(res)), assayName = "z")
+```
