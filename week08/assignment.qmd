@@ -1,0 +1,99 @@
+---
+title: "assignment08"
+author: "Xiaohan Xie"
+format: html
+editor: visual
+self-contained: true
+---
+
+```{r setup}
+suppressPackageStartupMessages({
+  library(epiwraps)
+  library(ggplot2)
+  library(AnnotationHub)
+  library(ensembldb)
+  library(edgeR)
+  library(rtracklayer)
+  library(BiocParallel)
+  library(bsseq)   # Class and tools to analyze bisulfite sequencing data at CpG-level
+  library(DMRcate) # Identification of differentially-methylated regions
+})
+```
+## 1. Plot a heatmap of the methylation levels of the genes in top 5 DMR regions (from the practical) located on chr1. 
+Load the BSseq object:
+```{r}
+bs <- readRDS("ESC_astrocytes_BSseq.rds")
+bs
+
+# remove CpGs that have 0 coverage in some samples:
+bs <- bs[rowSums(assay(bs,"Cov")>0)==ncol(bs),]
+
+design <- model.matrix(~celltype, data=pData(bs)) 
+design
+# adapt the design for methylation data: Each sample becomes two rows! 
+methdesign <- modelMatrixMeth(design)
+
+bs <- BSmooth(bs, BPPARAM=MulticoreParam(4, progress=TRUE))
+```
+Load the DMR results from the practical, get the top5 DMR regions on chr1:
+```{r}
+dmrRanges <- readRDS("dmr.rds")
+dmr_chr1 <- dmrRanges[seqnames(dmrRanges) == "chr1"]
+dmr_chr1_top5 <- dmr_chr1[order(abs(dmr_chr1$meandiff), decreasing=TRUE)][1:5]
+```
+Get the genes on chr1, find overlaps with top5 DMR regions: 
+```{r}
+genes <- readRDS("hg19_chr1_genes.rds")
+genes_hits <- findOverlaps(genes, dmr_chr1_top5, type = "any")
+genes_in_top_dmr <- genes[queryHits(genes_hits)]
+```
+Alternatively: we use the column overlapping.genes in the dmrRanges:
+```{r}
+gene_strings <- dmr_chr1_top5$overlapping.genes
+gene_strings <- gene_strings[!is.na(gene_strings)]
+gene_symbols <- unique(unlist(strsplit(gene_strings, ",\\s*")))
+gene_symbols
+genes_in_top_dmr <- genes[genes$symbol %in% gene_symbols]
+genes_in_top_dmr
+```
+
+
+Plot the methylation levels:
+```{r}
+met_genes <- bsseq::getMeth(bs, regions=genes_in_top_dmr, what="perRegion")
+rownames(met_genes) <- genes_in_top_dmr$symbol
+pheatmap(met_genes, name="gene\nmethylation")
+```
+## 2. Use the differentially-methylated regions from the practical, and compare those changes to changes in accessibility. 
+```{r}
+download.file("https://www.ethz-ins.org/content/ATAC_AstroVsESC_subset.rds", "ATAC_AstroVsESC_subset.rds")
+```
+
+We first load the accessibility data:
+```{r}
+# To deal with an error when reading the rds file: Failed with error:  'there is no package called 'Seqinfo'' (probably because the RDS file was created under a different Bioc version)
+# Updated R and Bioc to the newest version, where Seqinfo is separate 
+ATACRanges <- readRDS("ATAC_AstroVsESC_subset.rds")
+dmrRanges <- dmrRanges[order(abs(dmrRanges$meandiff), decreasing=TRUE)]
+```
+To compare changes in methylation to changes in accessibility, we first find overlapping regions between DMR ranges and ATAC ranges, using findOverlaps, setting type = "within". Then, we build a dataframe using the corresponding methylation mean difference and ATAC fold-change. 
+```{r}
+# we find ATACRanges that have overlappings with dmr
+ATAC_hits <- findOverlaps(ATACRanges, dmrRanges, type = "within")
+matched_df <- data.frame(
+  Meth_Diff = dmrRanges$meandiff[subjectHits(ATAC_hits)],
+  ATAC_Diff = ATACRanges$logFC[queryHits(ATAC_hits)] 
+)
+```
+Finally, we visualise with a scatter plot to see how methylation mean difference and ATAC fold-change relate to each other. 
+```{r}
+ggplot(matched_df, aes(x=Meth_Diff, y=ATAC_Diff)) + geom_point(alpha=0.5, color= "orange")+geom_smooth(method = "lm", color = "darkblue") + 
+  theme_minimal() + 
+  labs(
+    x = "Mean Methylation Difference",
+    y = "ATAC logFC"
+  )
+```
+The result shows a negative trend, supporting that DNA methylation is associated with low accessibility.
+
+
