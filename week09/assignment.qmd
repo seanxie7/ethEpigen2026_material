@@ -1,0 +1,105 @@
+---
+title: "assignment09"
+author: "Xiaohan Xie"
+format: html
+editor: visual
+self-contained: true
+---
+```{r}
+suppressPackageStartupMessages({
+  library(GenomicRanges)
+  library(epiwraps)
+  library(ggplot2)
+  library(rGREAT) # Gene Ontology enrichment among genomic regions
+})
+```
+
+## Download the data
+
+```{r, eval=FALSE}
+options(timeout = 6000)
+download.file("https://ethz-ins.org/content/clustering_assignment.zip", "clustering_assignment.zip")
+unzip("clustering_assignment.zip")
+list.files()
+```
+
+## Prepare the regions and the tracks
+
+```{r}
+peaks <- list.files(pattern="bed$")
+# we first import the peaks
+peaks <- lapply(peaks, rtracklayer::import.bed)
+# we'll focus on the high-quality peaks
+peaks <- lapply(peaks, FUN=function(x) x[x$score>800])
+# we get the union of non-redundant regions
+regions <- reduce(unlist(GRangesList(peaks)))
+```
+
+```{r}
+tracks <- list.files(pattern="bw$")
+ese <- signal2Matrix(tracks, regions, extend=2000)
+plotEnrichedHeatmaps(ese, use_raster = FALSE)
+ese2 <- ese[1:1000,]
+plotEnrichedHeatmaps(ese2, cluster_rows = TRUE, show_row_dend=TRUE,use_raster = FALSE )
+```
+## Clustering
+
+```{r}
+set.seed(123)  # to ensure that it gives the same results everytime
+```
+```{r}
+cl2 <- clusterSignalMatrices(ese, k=2:20, scaleRows = TRUE) # we normalise within the row
+ggplot(cl2$varExplained, aes(k, varExplained)) + geom_line()
+```
+We use k = 6 according to the elbow method: 
+```{r}
+cl <- clusterSignalMatrices(ese, k=6, scaleRows = TRUE)
+table(cl)
+head(cl)
+length(cl)
+nrow(ese)
+
+# to make sure the cluster labels stay associated with the corresponding regions/rows
+# even if we manipulate the object, put them inside the rowData of the object:
+rowData(ese)$cluster <- cl
+head(rowData(ese))
+```
+```{r}
+mycolors <- c("1"="red", "2"="blue", "3"="darkgreen", "4"="black", "5"= "yellow","6" = "purple")
+plotEnrichedHeatmaps(ese, row_split="cluster", mean_color=mycolors, colors=c("white","darkred"), use_raster = FALSE)
+```
+Plotting just the averages:
+
+```{r}
+d <- meltSignals(ese, splitBy=cl)
+ggplot(d, aes(position, mean, colour=sample)) + geom_line(size=1.2) + facet_wrap(~split)
+```
+
+## Enrichment analysis
+### Cluster4
+```{r}
+# we first split the regions by cluster:
+split_regions <- split(rowRanges(ese), rowData(ese)$cluster)
+lengths(split_regions)
+```
+
+```{r}
+res <- great(split_regions[["4"]], gene_sets="GO:BP", tss_source="hg38", 
+             background=regions, cores=2) # background = regions so it's not comparing to the entire genome! 
+bp <- getEnrichmentTables(res)
+head(bp)
+
+```
+plot the top Biological Processes:
+
+```{r, fig.width=9, fig.height=6}
+ggplot(head(bp,15), aes(fold_enrichment, reorder(description, p_adjust), 
+                        size=observed_region_hits, color=-log10(p_adjust))) + 
+  geom_point() + scale_color_viridis_c()
+```
+
+From the results, we can see that even though the signals might seem very similar at the first glance, clustering analysis reveals that the three TFs have different binding patterns:
+1. Creb1 and Creb3 show mutually exclusive binding patterns in some clusters, suggesting they regulate different sets of genes;
+2. Binding of Creb3L1 shares the same region as Creb1 in some clusters.
+
+From the enrichment analysis for cluster 2, we can see that this cluster, having a high Creb1 signal but low Creb3 and Creb3L signals, has high enrichment for genes related to neuronal activities (such as neuron differentiation), which algins with Creb1's role in neuronal plasticity and long-term memory according to previous research. 
